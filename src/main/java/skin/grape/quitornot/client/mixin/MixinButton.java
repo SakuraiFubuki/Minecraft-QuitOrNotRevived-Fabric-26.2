@@ -21,8 +21,8 @@ public abstract class MixinButton extends AbstractButton {
 
     @Inject(method = "onPress", at = @At("HEAD"), cancellable = true)
     private void qon$inject$onPress(CallbackInfo ci) {
-        if (Minecraft.getInstance().screen instanceof ConfirmScreen) {
-            if (((ConfirmScreen) Minecraft.getInstance().screen).isConfirmed()) {
+        if (Minecraft.getInstance().gui.screen() instanceof ConfirmScreen) {
+            if (((ConfirmScreen) Minecraft.getInstance().gui.screen()).isConfirmed()) {
                 return;
             }
         }

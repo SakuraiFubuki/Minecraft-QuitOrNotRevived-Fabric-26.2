@@ -18,9 +18,18 @@ import java.util.Collections;
 import java.util.List;
 
 public final class SettingElementListWidget extends ContainerObjectSelectionList<SettingElementListWidget.Entry> {
-    public SettingElementListWidget(Minecraft minecraftClient, int i, int j, int k, int l, int m) {
-        //super(minecraftClient, i, j, k, l, m);
-        super(minecraftClient, i, j, k, m);
+    /**
+     * @param width        widget width (the full screen width)
+     * @param screenHeight current screen height; the list itself stops at {@code bottom}
+     * @param top          y coordinate of the first row
+     * @param bottom       y coordinate the list must not cross (keeps clear of the Done button)
+     * @param itemHeight   row height
+     */
+    public SettingElementListWidget(Minecraft minecraftClient, int width, int screenHeight, int top, int bottom, int itemHeight) {
+        // AbstractSelectionList takes the widget HEIGHT (3rd arg) and its y (4th arg), not the
+        // screen height followed by a bottom edge. Passing the screen height made the list run off
+        // the bottom of the window and render underneath the footer button.
+        super(minecraftClient, width, Math.max(itemHeight, bottom - top), top, itemHeight);
     }
 
     @Override
@@ -59,11 +68,25 @@ public final class SettingElementListWidget extends ContainerObjectSelectionList
 
         @Override
         public void extractContent(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            assert minecraft.screen != null;
-            int dx = minecraft.screen.width / 2 - this.textWidth / 2;
+            assert minecraft.gui.screen() != null;
+            int dx = this.getContentX() + (this.getContentWidth() - this.textWidth) / 2;
             int dy = this.getContentY() + this.getContentHeight();
             ctx.text(minecraft.font, this.text, dx, dy - minecraft.font.lineHeight, textColor, true);
         }
+    }
+
+    /**
+     * Draws a row label, clipped so it can never run underneath the control on its right.
+     * Long translations (and narrow windows) used to overlap the value button / input box.
+     */
+    private void drawLabelClipped(GuiGraphicsExtractor ctx, Component label, int x, int y, int controlLeft) {
+        int maxRight = controlLeft - 4;
+        if (maxRight <= x) {
+            return;
+        }
+        ctx.enableScissor(x, y - 1, maxRight, y + minecraft.font.lineHeight + 1);
+        ctx.text(minecraft.font, label, x, y, ARGB.opaque(16777215), true);
+        ctx.disableScissor();
     }
 
     public class InputListEntry extends Entry {
@@ -82,10 +105,10 @@ public final class SettingElementListWidget extends ContainerObjectSelectionList
 
         @Override
         public void extractContent(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            ctx.text(minecraft.font, describeText, this.getContentX(), (int) (this.getContentY() + minecraft.font.lineHeight / 2.0),
-                    ARGB.opaque(16777215), true);
             this.fieldWidget.setX(this.getContentWidth() - fieldWidget.getWidth() + this.getContentX());
             this.fieldWidget.setY(this.getContentY());
+            drawLabelClipped(ctx, describeText, this.getContentX(),
+                    (int) (this.getContentY() + minecraft.font.lineHeight / 2.0), this.fieldWidget.getX());
             this.fieldWidget.extractRenderState(ctx, mouseX, mouseY, tickDelta);
         }
 
@@ -112,9 +135,9 @@ public final class SettingElementListWidget extends ContainerObjectSelectionList
 
         @Override
         public void extractContent(GuiGraphicsExtractor ctx, int mouseX, int mouseY, boolean hovered, float tickDelta) {
-            ctx.text(minecraft.font, describeText, this.getContentX(), this.getContentY() + 5, ARGB.opaque(16777215), true);
             this.button.setX(this.getContentWidth() - button.getWidth() + this.getContentX());
             this.button.setY(this.getContentY());
+            drawLabelClipped(ctx, describeText, this.getContentX(), this.getContentY() + 5, this.button.getX());
             this.button.extractRenderState(ctx, mouseX, mouseY, tickDelta);
         }
 

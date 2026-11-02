@@ -14,20 +14,36 @@ import net.minecraft.network.chat.Style;
 import java.util.function.Consumer;
 
 public final class SettingScreen extends Screen {
+    /** Distance from the top of the screen to the first row (below the title). */
+    private static final int LIST_TOP = 30;
+    /** Keep the scroll area clear of the bottom Done button. */
+    private static final int LIST_BOTTOM_MARGIN = 40;
+    private static final int ENTRY_HEIGHT = 24;
+    private static final int FOOTER_BUTTON_WIDTH = 200;
+
     private final Screen parentScreen;
     private Button back;
+    private SettingElementListWidget listWidget;
 
     public SettingScreen(Screen screen) {
         super(Component.translatable("config.quitornot.settings.title"));
         parentScreen = screen;
     }
 
+    /**
+     * Height available to the scroll list. Kept in one place so {@link #init()} and
+     * {@link #repositionElements()} can never disagree.
+     */
+    private int listHeight() {
+        return Math.max(ENTRY_HEIGHT, this.height - LIST_BOTTOM_MARGIN - LIST_TOP);
+    }
+
     @Override
     protected void init() {
         back = Button.builder(CommonComponents.GUI_DONE, button -> this.onClose())
-                .bounds(this.width / 2 - 100, this.height - 30, 200, 20).build();
+                .bounds(this.width / 2 - FOOTER_BUTTON_WIDTH / 2, this.height - 30, FOOTER_BUTTON_WIDTH, 20).build();
 
-        SettingElementListWidget listWidget = new SettingElementListWidget(this.minecraft, this.width, this.height, 30 /* 上边距 */, height - 40/* 下边距 */, 24);
+        listWidget = new SettingElementListWidget(this.minecraft, this.width, this.height, LIST_TOP, this.height - LIST_BOTTOM_MARGIN, ENTRY_HEIGHT);
         {
             MutableComponent category = Component.translatable("config.quitornot.settings.type.confirm.category");
             listWidget.addEntry(listWidget.new CategoryEntry(category.setStyle(Style.EMPTY.withBold(true)), ARGB.opaque(11184810)));
@@ -103,6 +119,22 @@ public final class SettingScreen extends Screen {
         this.addRenderableWidget(back);
     }
 
+    /**
+     * 26.2 resizes screens by calling this instead of re-running {@link #init()}, so the widget
+     * geometry has to be refreshed here. Resizing the list in place (rather than rebuilding the
+     * widgets) also keeps the player's scroll position when the window is resized.
+     */
+    @Override
+    protected void repositionElements() {
+        if (this.listWidget == null || this.back == null || minecraft == null) {
+            super.repositionElements();
+            return;
+        }
+        this.listWidget.updateSizeAndPosition(this.width, listHeight(), LIST_TOP);
+        this.back.setX(this.width / 2 - FOOTER_BUTTON_WIDTH / 2);
+        this.back.setY(this.height - 30);
+    }
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         super.extractRenderState(ctx, mouseX, mouseY, delta);
@@ -115,7 +147,7 @@ public final class SettingScreen extends Screen {
     @Override
     public void onClose() {
         Config.save();
-        minecraft.setScreen(parentScreen);
+        minecraft.gui.setScreen(parentScreen);
     }
 
     class PositiveLongParser implements Consumer<String> {

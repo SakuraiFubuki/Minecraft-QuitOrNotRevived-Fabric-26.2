@@ -30,7 +30,7 @@ public final class ConfirmScreen extends Screen {
         super(Component.translatable("screen.quitornot.confirm.title"));
         this.openTime = System.currentTimeMillis();
         this.message = message;
-        this.onCancel = () -> this.minecraft.setScreen(parentScreen);
+        this.onCancel = () -> this.minecraft.gui.setScreen(parentScreen);
         this.onConfirm = () -> {
             confirmed = true;
             confirm.run();

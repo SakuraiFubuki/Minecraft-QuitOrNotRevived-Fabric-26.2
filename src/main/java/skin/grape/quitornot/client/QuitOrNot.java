@@ -21,6 +21,20 @@ public class QuitOrNot implements ClientModInitializer {
     private final ToastQuitHandler toastInSinglePlayerQuitHandle = new ToastQuitHandler(Component.translatable("toast.quitornot.confirm.title.singleplayer"));
     private final ToastQuitHandler toastInMultiplayerQuitHandle = new ToastQuitHandler(Component.translatable("toast.quitornot.confirm.title.multiplayer"));
 
+    /**
+     * Opens the confirmation screen, unless one is already open.
+     * <p>
+     * A quit request can arrive more than once for a single window close (the 26.2 close callback
+     * plus the per-frame {@code shouldClose} poll). Without this guard each request would stack
+     * another confirmation screen on top of the previous one.
+     */
+    private static void openConfirmScreen(Component title, Runnable onConfirm) {
+        if (Minecraft.getInstance().gui.screen() instanceof ConfirmScreen) {
+            return;
+        }
+        Minecraft.getInstance().gui.setScreen(new ConfirmScreen(Minecraft.getInstance().gui.screen(), title, onConfirm));
+    }
+
     @Override
     public void onInitializeClient() {
         Config.load();
@@ -29,14 +43,14 @@ public class QuitOrNot implements ClientModInitializer {
                 return toastInFinalQuitHandler.trigger();
             }
             if (Config.config.confirmTypeQuitGame == Config.ConfirmType.SCREEN) {
-                Minecraft.getInstance().setScreen(new ConfirmScreen(Minecraft.getInstance().screen, Component.translatable("screen.quitornot.confirm.title.game"), () -> Minecraft.getInstance().stop()));
+                openConfirmScreen(Component.translatable("screen.quitornot.confirm.title.game"), () -> Minecraft.getInstance().stop());
                 return EventResult.CANCEL;
             }
             return EventResult.PASS;
         });
 
         ButtonPressEvent.BUTTON_PRESS.register(button -> {
-            if (!(Minecraft.getInstance().screen instanceof PauseScreen)) {
+            if (!(Minecraft.getInstance().gui.screen() instanceof PauseScreen)) {
                 return EventResult.PASS;
             }
             String key = null;
@@ -50,7 +64,7 @@ public class QuitOrNot implements ClientModInitializer {
                     return toastInSinglePlayerQuitHandle.trigger();
                 }
                 if (Config.config.confirmTypeQuitSinglePlayer == Config.ConfirmType.SCREEN) {
-                    Minecraft.getInstance().setScreen(new ConfirmScreen(Minecraft.getInstance().screen, Component.translatable("screen.quitornot.confirm.title.singleplayer"), () -> button.onPress(null)));
+                    openConfirmScreen(Component.translatable("screen.quitornot.confirm.title.singleplayer"), () -> button.onPress(null));
                     return EventResult.CANCEL;
                 }
                 return EventResult.PASS;
@@ -60,7 +74,7 @@ public class QuitOrNot implements ClientModInitializer {
                     return toastInMultiplayerQuitHandle.trigger();
                 }
                 if (Config.config.confirmTypeQuitMultiplayer == Config.ConfirmType.SCREEN) {
-                    Minecraft.getInstance().setScreen(new ConfirmScreen(Minecraft.getInstance().screen, Component.translatable("screen.quitornot.confirm.title.multiplayer"), () -> button.onPress(null)));
+                    openConfirmScreen(Component.translatable("screen.quitornot.confirm.title.multiplayer"), () -> button.onPress(null));
                     return EventResult.CANCEL;
                 }
                 return EventResult.PASS;

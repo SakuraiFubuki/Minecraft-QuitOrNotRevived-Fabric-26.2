@@ -26,7 +26,7 @@ public class ToastQuitHandler {
         if (state == State.INACTIVE) {
             startTime = millis;
             state = State.ACTIVE;
-            Minecraft.getInstance().getToastManager().addToast(
+            Minecraft.getInstance().gui.toastManager().addToast(
                     new QuitToast(message, Config.config.toastKeepTime)
             );
             return EventResult.CANCEL;
